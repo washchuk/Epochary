@@ -1,0 +1,34 @@
+name: Epochary
+options:
+  bundleIdPrefix: com.washchuk
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+packages:
+  EpocharyKit:
+    path: Packages/EpocharyKit
+targets:
+  Epochary:
+    type: application
+    platform: macOS
+    sources:
+      - Epochary
+    dependencies:
+      - package: EpocharyKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.washchuk.Epochary
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Epochary
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_APP_SANDBOX: NO
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        COMBINE_HIDPI_IMAGES: YES
