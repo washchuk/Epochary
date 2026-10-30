@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		14C3CB0F3D22BAE96C8DDC63 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3AD189AA4F6F075D3292CC5 /* Preferences.swift */; };
 		14FD69EBF2B4B0AEBEAED2E7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1D19B556119CCEBEB359839B /* Assets.xcassets */; };
+		1A44AF83F6DAA2F93A24D39D /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 4089907B4ABA1395850C6016 /* LICENSE */; };
 		304595532E752C703FB6FC09 /* EpocharyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA12A99173E0D88BD9CC3E5 /* EpocharyApp.swift */; };
 		3BA5893E271714AD460BDA8B /* EpocharyKit in Frameworks */ = {isa = PBXBuildFile; productRef = B1C0A32F63F7F6C5C3551D97 /* EpocharyKit */; };
 		754756CC2D4C9B6788E52D73 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9621DBACDD7268A1D13F2F6E /* ContentView.swift */; };
@@ -22,6 +23,7 @@
 		0D2EB1B8BAFF1B369BB6C53F /* Medium.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Medium.swift; sourceTree = "<group>"; };
 		0E589B20F58E45E8314EC9BE /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		1D19B556119CCEBEB359839B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4089907B4ABA1395850C6016 /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
 		6FA12A99173E0D88BD9CC3E5 /* EpocharyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EpocharyApp.swift; sourceTree = "<group>"; };
 		9621DBACDD7268A1D13F2F6E /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		9E73CEABB1C3561E8B9C612B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -77,6 +79,7 @@
 		EE17F473118CAD2635692941 = {
 			isa = PBXGroup;
 			children = (
+				4089907B4ABA1395850C6016 /* LICENSE */,
 				9357AB3F8A6D4390EC9676BE /* Epochary */,
 				954A694534EE995D3058A312 /* Packages */,
 				CBA64561FE5326A116B24DC5 /* Products */,
@@ -149,6 +152,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				14FD69EBF2B4B0AEBEAED2E7 /* Assets.xcassets in Resources */,
+				1A44AF83F6DAA2F93A24D39D /* LICENSE in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -209,7 +213,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Epochary;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Matt Washchuk. Licensed under the GNU GPL v3 or later.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -299,7 +303,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Epochary;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Matt Washchuk. Licensed under the GNU GPL v3 or later.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

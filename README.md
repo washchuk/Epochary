@@ -223,3 +223,16 @@ EPOCHARY_TOOLS_DIR="$PWD/../../build/vendor/bin" swift test
 - **Free space:** writing one segment at a time, Epochary won't start unless the destination
   has room for a segment and its recovery data. Otherwise it warns when the archive might not
   fit, since it can't know in advance how well the data will compress.
+
+## License
+
+Copyright © 2026 Matt Washchuk.
+
+Epochary is free software: you can redistribute it and/or modify it under the terms of the
+[GNU General Public License](LICENSE), version 3 or (at your option) any later version.
+It is distributed in the hope that it will be useful, but without any warranty; see the
+license for details.
+
+The bundled command-line tools keep their own licenses (see
+[Bundled tools and their licenses](#bundled-tools-and-their-licenses)), and
+`PassphraseWords.swift` is under age's BSD 3-Clause license.
