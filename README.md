@@ -1,7 +1,7 @@
 # Epochary
 
 A small Mac app for archiving files and folders for the long term, using only open
-formats and open-source tools that will still be around in 20 years. Drag in files
+formats and open-source tools that (hopefully) will still be around in 20 years. Drag in files
 and folders, choose who can decrypt them, and Epochary produces an encrypted,
 compressed, checksummed archive (optionally with PAR2 recovery data) plus a plain-text
 README explaining how to restore it **without Epochary or a Mac**.
