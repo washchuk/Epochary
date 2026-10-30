@@ -11,6 +11,8 @@ struct SettingsView: View {
                 .tabItem { Label("Archive", systemImage: "archivebox") }
             ToolsSettingsView()
                 .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver") }
+            AcknowledgementsView()
+                .tabItem { Label("Licenses", systemImage: "doc.text") }
         }
         .frame(width: 600, height: 440)
     }
@@ -302,7 +304,7 @@ struct ToolsSettingsView: View {
                 }
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Install everything with Homebrew:")
+                    Text("Epochary uses its bundled tools when it has them. Otherwise, install them with Homebrew:")
                     Text("brew install gnu-tar zstd age par2")
                         .font(.body.monospaced())
                         .textSelection(.enabled)
@@ -344,7 +346,7 @@ struct ToolRow: View {
                     .foregroundStyle(path == nil ? (tool.isRequiredForArchiving ? .red : .orange) : .green)
                 VStack(alignment: .leading) {
                     Text(tool.executableName).font(.body.monospaced())
-                    Text(path.map { "\($0.path)\(version.map { " · \($0)" } ?? "")" }
+                    Text(path.map { "\(ToolLocator.isBundled($0) ? "Bundled" : $0.path)\(version.map { " · \($0)" } ?? "")" }
                          ?? (tool.isRequiredForArchiving ? "Not found (required)" : "Not found (optional)"))
                         .font(.caption)
                         .foregroundStyle(.secondary)

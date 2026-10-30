@@ -95,16 +95,63 @@ you to change media between them, for when there isn't room to copy them all to 
 
 ## Requirements
 
-- macOS 14 or later
-- The command-line tools, from Homebrew:
+macOS 14 or later. Release builds of Epochary bundle their own copies of the tools, so
+nothing else needs installing.
 
-  ```bash
-  brew install gnu-tar zstd age par2
-  ```
+A build without bundled tools (see Building) uses copies installed on the Mac:
 
-  Epochary looks in `/opt/homebrew/bin`, `/usr/local/bin`, `/opt/local/bin` and
-  `/usr/bin`. You can point it at other copies in **Settings › Tools**. `par2` is only
-  needed for recovery data.
+```bash
+brew install gnu-tar zstd age par2
+```
+
+Epochary uses its bundled tools first, then looks in `/opt/homebrew/bin`, `/usr/local/bin`,
+`/opt/local/bin` and `/usr/bin`. You can point it at other copies in **Settings › Tools**.
+`par2` is only needed for recovery data.
+
+## Bundled tools and their licenses
+
+Epochary bundles unmodified builds of these tools in `Epochary.app/Contents/Helpers`:
+
+| Tool | Version | License |
+|---|---|---|
+| [GNU tar](https://www.gnu.org/software/tar/) | 1.35 | GPL-3.0-or-later |
+| [Zstandard](https://facebook.github.io/zstd/) | 1.5.7 | BSD-3-Clause (from its BSD/GPLv2 dual license), with libdivsufsort (MIT) |
+| [age](https://age-encryption.org) | 1.3.2 | BSD-3-Clause, plus the BSD-licensed Go standard library and modules it's built with |
+| [par2cmdline-turbo](https://github.com/animetosho/par2cmdline-turbo) | 1.5.0 | GPL-2.0-or-later |
+
+They're separate programs that Epochary runs as separate processes, so their licenses
+don't extend to Epochary's own code. Their license texts and a notices file are bundled in
+`Contents/Resources/Licenses` and shown in **Settings › Licenses**.
+
+par2cmdline-turbo is a faster fork of par2cmdline (multi-threaded, with SIMD) that writes
+the identical PAR2 format, which matters for tape-sized segments.
+
+[`Vendor/build-tools.sh`](Vendor/build-tools.sh) builds the tools from upstream sources
+pinned by SHA-256 (GNU tar's was also checked against its GPG signature). They're built as
+universal binaries that depend only on macOS, with no Homebrew libraries. It needs Xcode's
+command-line tools, Go and Rosetta:
+
+```bash
+Vendor/build-tools.sh
+```
+
+The output goes to `build/vendor/`. Xcode's "Bundle command-line tools" build phase copies
+it into the app and signs each tool with the app's identity and the hardened runtime. A
+Release build fails if the tools haven't been built. A Debug build without them falls back
+to installed copies.
+
+### Releasing (license compliance)
+
+GNU tar and par2cmdline-turbo are GPL. Distributing their binaries requires making their
+exact source code available. For every release that ships the bundled tools:
+
+1. Run `Vendor/build-tools.sh`, then build, sign and notarize the Release build.
+2. Create the GitHub release and attach the app and everything in `build/vendor/sources/`:
+   the four source archives, `build-tools.sh` and `SHA256SUMS`. Putting the source in the
+   same place as the binaries is what the GPL asks for.
+3. Keep those source files attached for as long as that release's app is downloadable.
+
+The bundled notices point to the releases page for the source.
 
 ## Keys
 
@@ -126,10 +173,12 @@ open Epochary.xcodeproj
 
 The archive engine lives in the `EpocharyKit` Swift package, which has its own tests.
 With the tools above installed, they run end to end: they create archives, restore them
-with plain shell commands, and repair a deliberately damaged archive with par2.
+with plain shell commands, and repair a deliberately damaged archive with par2. To test
+against the bundled builds instead, point the tests at them:
 
 ```bash
 cd Packages/EpocharyKit && swift test
+EPOCHARY_TOOLS_DIR="$PWD/../../build/vendor/bin" swift test
 ```
 
 ## Notes and limitations

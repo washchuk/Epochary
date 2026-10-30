@@ -366,7 +366,8 @@ struct ArchiveReadme: Sendable {
             (.age, "  (format: https://age-encryption.org/v1)"),
         ] + (hasParity ? [(.par2, "")] : [])
         let toolLines = tools.map { tool, note in
-            "  \(tool.displayName) \(Self.versionNumber(toolVersions[tool]) ?? "")\n      \(tool.homepage)\(note)"
+            "  \(tool.displayName) \(Self.versionNumber(toolVersions[tool]) ?? "")\n"
+                + "      \(tool.homepage(forVersion: toolVersions[tool]))\(note)"
         }.joined(separator: "\n")
         let zstdSettings = "level \(request.compressionLevel)"
             + (request.longWindow ? ", long-distance window 2^31\n        (decompressing needs --long=31 and about 2 GiB of memory)" : "")
@@ -375,7 +376,8 @@ struct ArchiveReadme: Sendable {
 
         \(toolLines)
 
-          Other implementations of the same formats work too, such as bsdtar or rage.
+          Other implementations of the same formats work too, such as bsdtar, rage or
+          par2cmdline.
 
           tar:  pax format, entries sorted by name, numeric owner IDs\(request.excludeFinderMetadata ? ", .DS_Store files skipped" : "")
           zstd: \(zstdSettings)

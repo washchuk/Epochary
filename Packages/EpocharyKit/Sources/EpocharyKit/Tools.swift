@@ -40,6 +40,15 @@ public enum Tool: String, CaseIterable, Sendable, Codable {
         }
     }
 
+    /// The homepage of the implementation that printed `versionLine`; Epochary bundles
+    /// par2cmdline-turbo, but a user may point it at the original par2cmdline.
+    public func homepage(forVersion versionLine: String?) -> String {
+        if self == .par2, versionLine?.localizedCaseInsensitiveContains("turbo") == true {
+            return "https://github.com/animetosho/par2cmdline-turbo"
+        }
+        return homepage
+    }
+
     /// par2 is only needed when recovery data is requested; age-keygen only for generating keys.
     public var isRequiredForArchiving: Bool {
         switch self {
@@ -59,26 +68,40 @@ public struct ToolLocator: Sendable {
         "/usr/bin",
     ].map { URL(fileURLWithPath: $0, isDirectory: true) }
 
-    /// Explicit per-tool paths chosen by the user; these win over searching.
+    /// Where the app bundles its own builds of the tools (Vendor/build-tools.sh).
+    public static var bundledDirectory: URL {
+        Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers", isDirectory: true)
+    }
+
+    /// Explicit per-tool paths chosen by the user; these win over everything else.
     public var overrides: [Tool: URL]
-    /// Directories searched in order, after any bundled helpers.
+    /// Directories searched in order: the app's bundled tools, then package managers.
     public var searchDirectories: [URL]
 
-    public init(overrides: [Tool: URL] = [:], searchDirectories: [URL] = ToolLocator.defaultSearchDirectories) {
+    /// `EPOCHARY_TOOLS_DIR` restricts the search to one directory, so tests can run
+    /// against a particular set of builds.
+    public init(overrides: [Tool: URL] = [:], searchDirectories: [URL]? = nil) {
         self.overrides = overrides
-        self.searchDirectories = searchDirectories
+        if let searchDirectories {
+            self.searchDirectories = searchDirectories
+        } else if let only = ProcessInfo.processInfo.environment["EPOCHARY_TOOLS_DIR"] {
+            self.searchDirectories = [URL(fileURLWithPath: only, isDirectory: true)]
+        } else {
+            self.searchDirectories = [Self.bundledDirectory] + Self.defaultSearchDirectories
+        }
     }
 
     public func locate(_ tool: Tool) -> URL? {
         if let override = overrides[tool] {
             return Self.isExecutable(override) ? override : nil
         }
-        var candidates: [URL] = []
-        if let bundled = Bundle.main.url(forAuxiliaryExecutable: tool.executableName) {
-            candidates.append(bundled)
-        }
-        candidates += searchDirectories.map { $0.appendingPathComponent(tool.executableName) }
-        return candidates.first(where: Self.isExecutable)
+        return searchDirectories.map { $0.appendingPathComponent(tool.executableName) }
+            .first(where: Self.isExecutable)
+    }
+
+    /// True when `url` is one of the copies shipped inside the app.
+    public static func isBundled(_ url: URL) -> Bool {
+        url.deletingLastPathComponent().standardizedFileURL.path == bundledDirectory.standardizedFileURL.path
     }
 
     public func require(_ tool: Tool) throws -> URL {

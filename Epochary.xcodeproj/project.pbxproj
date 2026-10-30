@@ -14,6 +14,7 @@
 		754756CC2D4C9B6788E52D73 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9621DBACDD7268A1D13F2F6E /* ContentView.swift */; };
 		7C36062729FCF0207628937A /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E589B20F58E45E8314EC9BE /* AppModel.swift */; };
 		D47B35990261B185C61EF11D /* Medium.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2EB1B8BAFF1B369BB6C53F /* Medium.swift */; };
+		F27CB0833067B1AC9115098F /* AcknowledgementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA3CEF4342FC4C0EFEBAE09 /* AcknowledgementsView.swift */; };
 		F5CB3615BB27C4FF7BBF5660 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E73CEABB1C3561E8B9C612B /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
@@ -27,6 +28,7 @@
 		AFA0FDE24FA0E23CF808E1BD /* Epochary.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Epochary.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3AD189AA4F6F075D3292CC5 /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
 		F9725255F0D2EA1DD25E351A /* EpocharyKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = EpocharyKit; path = Packages/EpocharyKit; sourceTree = SOURCE_ROOT; };
+		FEA3CEF4342FC4C0EFEBAE09 /* AcknowledgementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcknowledgementsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +46,7 @@
 		9357AB3F8A6D4390EC9676BE /* Epochary */ = {
 			isa = PBXGroup;
 			children = (
+				FEA3CEF4342FC4C0EFEBAE09 /* AcknowledgementsView.swift */,
 				0E589B20F58E45E8314EC9BE /* AppModel.swift */,
 				1D19B556119CCEBEB359839B /* Assets.xcassets */,
 				9621DBACDD7268A1D13F2F6E /* ContentView.swift */,
@@ -90,6 +93,7 @@
 				DB661DC96E21A9AC99EA4C8A /* Sources */,
 				59DF667BC2D3FD6D7AD94ADC /* Resources */,
 				1C49F027EE827DA9B30A7260 /* Frameworks */,
+				04CAD284DE2B91D45F9459FD /* Bundle command-line tools */,
 			);
 			buildRules = (
 			);
@@ -150,11 +154,34 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		04CAD284DE2B91D45F9459FD /* Bundle command-line tools */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle command-line tools";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Copies the tools built by Vendor/build-tools.sh into the app and signs them\n# with the app's identity and the hardened runtime, as notarization requires.\nset -euo pipefail\nVENDOR=\"$SRCROOT/build/vendor\"\nHELPERS=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Helpers\"\nLICENSES=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Licenses\"\nif [ ! -d \"$VENDOR/bin\" ]; then\n  if [ \"$CONFIGURATION\" = Release ]; then\n    echo \"error: Run Vendor/build-tools.sh first; a release must bundle the tools and their licenses.\"\n    exit 1\n  fi\n  echo \"warning: Tools aren't bundled (run Vendor/build-tools.sh); this build uses tools installed on the Mac.\"\n  rm -rf \"$HELPERS\" \"$LICENSES\"\n  exit 0\nfi\nmkdir -p \"$HELPERS\" \"$LICENSES\"\nrsync -a --delete \"$VENDOR/bin/\" \"$HELPERS/\"\nrsync -a --delete \"$VENDOR/Licenses/\" \"$LICENSES/\"\nIDENTITY=\"${EXPANDED_CODE_SIGN_IDENTITY:--}\"\nif [ \"$IDENTITY\" = \"-\" ]; then TIMESTAMP=--timestamp=none; else TIMESTAMP=--timestamp; fi\nfor tool in \"$HELPERS\"/*; do\n  codesign --force --options runtime \"$TIMESTAMP\" --sign \"$IDENTITY\" \"$tool\"\ndone\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		DB661DC96E21A9AC99EA4C8A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F27CB0833067B1AC9115098F /* AcknowledgementsView.swift in Sources */,
 				7C36062729FCF0207628937A /* AppModel.swift in Sources */,
 				754756CC2D4C9B6788E52D73 /* ContentView.swift in Sources */,
 				304595532E752C703FB6FC09 /* EpocharyApp.swift in Sources */,
@@ -178,6 +205,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Epochary;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -267,6 +295,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Epochary;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
