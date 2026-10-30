@@ -87,8 +87,9 @@ struct DestinationIntegrationTests {
             }
         }
         #expect(assertions.value.contains("PreventUserIdleSystemSleep"))
-        #expect(assertions.value.contains("Creating an archive"))
+        // Named, since other tests' archives may be running at the same time.
+        #expect(assertions.value.contains("Creating the archive \"awake\""))
         let after = try shell("pmset -g assertions", in: root.url)
-        #expect(!after.contains("Creating an archive"))
+        #expect(!after.contains("Creating the archive \"awake\""))
     }
 }

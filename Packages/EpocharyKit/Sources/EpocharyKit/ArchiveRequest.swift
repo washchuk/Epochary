@@ -6,7 +6,11 @@ public struct ArchiveRequest: Sendable {
     /// The archive set is written to a new folder named `name` inside this directory.
     public var destinationDirectory: URL
     public var name: String
+    /// The age public keys to encrypt to, unless `passphrase` is set.
     public var recipients: [Recipient]
+    /// Encrypt with this passphrase instead of keys (age's scrypt mode). age allows only one
+    /// passphrase and no keys alongside it, so `recipients` is then ignored.
+    public var passphrase: String?
     /// zstd level; 20–22 enable `--ultra`.
     public var compressionLevel: Int
     /// Use a 2 GiB long-distance matching window (`--long=31`).
@@ -25,11 +29,12 @@ public struct ArchiveRequest: Sendable {
     public init(sources: [URL], destinationDirectory: URL, name: String, recipients: [Recipient],
                 compressionLevel: Int = 19, longWindow: Bool = true, parityPercent: Int? = nil,
                 excludeFinderMetadata: Bool = true, verify: Bool = true,
-                segmentation: SegmentOptions? = nil, stopOnSourceChange: Bool = false) {
+                segmentation: SegmentOptions? = nil, stopOnSourceChange: Bool = false, passphrase: String? = nil) {
         self.sources = sources
         self.destinationDirectory = destinationDirectory
         self.name = name
         self.recipients = recipients
+        self.passphrase = passphrase
         self.compressionLevel = compressionLevel
         self.longWindow = longWindow
         self.parityPercent = parityPercent
@@ -146,8 +151,21 @@ enum CommandLines {
 
     static let tarList = ["--list", "--file=-"]
 
-    static func age(recipients: [Recipient]) -> [String] {
-        recipients.flatMap { ["-r", $0.publicKey] }
+    struct Age {
+        let arguments: [String]
+        let environment: [String: String]
+    }
+
+    /// Encrypting to keys, or to a passphrase through age's batchpass plugin, which takes the
+    /// passphrase from the environment because age itself only reads one from a terminal.
+    /// The result is an ordinary passphrase-encrypted age file that `age -d` decrypts.
+    static func age(_ request: ArchiveRequest, passphrasePlugin: URL?) -> Age {
+        guard let passphrase = request.passphrase, let passphrasePlugin else {
+            return Age(arguments: request.recipients.flatMap { ["-r", $0.publicKey] }, environment: [:])
+        }
+        let path = [passphrasePlugin.deletingLastPathComponent().path, "/usr/bin", "/bin"].joined(separator: ":")
+        return Age(arguments: ["-e", "-j", "batchpass"],
+                   environment: ["AGE_PASSPHRASE": Passphrase.normalized(passphrase), "PATH": path])
     }
 
     static func par2(percent: Int, fileName: String) -> [String] {

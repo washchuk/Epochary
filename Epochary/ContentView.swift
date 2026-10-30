@@ -53,7 +53,7 @@ struct ComposeView: View {
                         Button("Choose…") { model.chooseDestination() }
                     }
                 }
-                RecipientsSection()
+                EncryptionSection()
                 Picker("Recovery data", selection: $model.parityPercent) {
                     Text("None").tag(0)
                     ForEach(ArchiveRequest.parityOptions, id: \.self) { Text("\($0)% (PAR2)").tag($0) }
@@ -165,27 +165,88 @@ struct SourceRow: View {
     }
 }
 
-struct RecipientsSection: View {
+struct EncryptionSection: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        Section("Encrypt to") {
-            if model.keys.recipients.isEmpty {
-                HStack {
-                    Text("No keys yet.").foregroundStyle(.secondary)
-                    Spacer()
-                    SettingsLink { Text("Add a Key…") }
-                }
-            } else {
-                ForEach(model.keys.recipients) { recipient in
-                    Toggle(isOn: binding(for: recipient.id)) {
-                        Text(recipient.label.isEmpty ? "Unlabeled key" : recipient.label)
-                        Text(recipient.publicKey.abbreviatedKey)
-                            .font(.caption.monospaced())
-                    }
+        @Bindable var model = model
+        Section {
+            Picker("Encrypt with", selection: $model.encryptionMethod) {
+                Text("Keys").tag(AppModel.EncryptionMethod.keys)
+                Text("Passphrase").tag(AppModel.EncryptionMethod.passphrase)
+            }
+            .pickerStyle(.segmented)
+            switch model.encryptionMethod {
+            case .keys: keys
+            case .passphrase: passphrase
+            }
+        } header: {
+            Text("Encryption")
+        } footer: {
+            if model.encryptionMethod == .passphrase {
+                Text("A passphrase replaces keys: age doesn't allow both on one archive. Epochary never saves "
+                     + "the passphrase, and without it the archive can never be opened.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder private var keys: some View {
+        if model.keys.recipients.isEmpty {
+            HStack {
+                Text("No keys yet.").foregroundStyle(.secondary)
+                Spacer()
+                SettingsLink { Text("Add a Key…") }
+            }
+        } else {
+            ForEach(model.keys.recipients) { recipient in
+                Toggle(isOn: binding(for: recipient.id)) {
+                    Text(recipient.label.isEmpty ? "Unlabeled key" : recipient.label)
+                    Text(recipient.publicKey.abbreviatedKey)
+                        .font(.caption.monospaced())
                 }
             }
         }
+    }
+
+    @ViewBuilder private var passphrase: some View {
+        @Bindable var model = model
+        SecureField("Passphrase", text: $model.passphrase, prompt: Text("Type or generate one"))
+        SecureField("Confirm passphrase", text: $model.passphraseConfirmation, prompt: Text("Type it again"))
+        if let generated = model.shownGeneratedPassphrase {
+            LabeledContent("Generated") {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(generated)
+                        .font(.body.monospaced())
+                        .foregroundStyle(.primary)
+                        .textSelection(.enabled)
+                        .multilineTextAlignment(.trailing)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("Copy") { copyConcealed(generated) }
+                }
+            }
+            Toggle("I've saved this passphrase somewhere safe", isOn: $model.generatedPassphraseSaved)
+        }
+        ForEach(model.passphrase.isEmpty ? [] : Passphrase.warnings(for: model.passphrase), id: \.self) { warning in
+            Label(warning, systemImage: "exclamationmark.triangle.fill")
+                .symbolRenderingMode(.multicolor)
+                .foregroundStyle(.secondary)
+        }
+        HStack {
+            Spacer()
+            Button(model.shownGeneratedPassphrase == nil ? "Generate Passphrase" : "Generate Another") {
+                model.generatePassphrase()
+            }
+        }
+    }
+
+    /// Marked concealed, so clipboard managers that honor the convention don't keep a copy.
+    private func copyConcealed(_ text: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        pasteboard.setString("", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
     }
 
     private func binding(for id: Recipient.ID) -> Binding<Bool> {

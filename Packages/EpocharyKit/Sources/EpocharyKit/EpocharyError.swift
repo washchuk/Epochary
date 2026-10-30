@@ -4,6 +4,7 @@ public enum EpocharyError: LocalizedError, Equatable {
     case toolMissing(Tool)
     case noSources
     case noRecipients
+    case invalidPassphrase(String)
     case invalidArchiveName(String)
     case sourceMissing(URL)
     case duplicateItemName(String)
@@ -26,6 +27,8 @@ public enum EpocharyError: LocalizedError, Equatable {
             "Add at least one file or folder to archive."
         case .noRecipients:
             "Choose at least one age key to encrypt to."
+        case .invalidPassphrase(let reason):
+            "Invalid passphrase: \(reason)"
         case .invalidArchiveName(let reason):
             "Invalid archive name: \(reason)"
         case .sourceMissing(let url):

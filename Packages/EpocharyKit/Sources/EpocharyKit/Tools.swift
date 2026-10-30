@@ -6,6 +6,8 @@ public enum Tool: String, CaseIterable, Sendable, Codable {
     case zstd
     case age
     case ageKeygen = "age-keygen"
+    /// age's plugin for passphrases supplied by a program rather than typed at a terminal.
+    case agePassphrasePlugin = "age-plugin-batchpass"
     case par2
 
     /// The executable name to look for on disk.
@@ -17,6 +19,7 @@ public enum Tool: String, CaseIterable, Sendable, Codable {
         case .zstd: "Zstandard"
         case .age: "age"
         case .ageKeygen: "age-keygen"
+        case .agePassphrasePlugin: "age passphrase plugin"
         case .par2: "par2"
         }
     }
@@ -26,7 +29,7 @@ public enum Tool: String, CaseIterable, Sendable, Codable {
         switch self {
         case .tar: "gnu-tar"
         case .zstd: "zstd"
-        case .age, .ageKeygen: "age"
+        case .age, .ageKeygen, .agePassphrasePlugin: "age"
         case .par2: "par2"
         }
     }
@@ -35,7 +38,7 @@ public enum Tool: String, CaseIterable, Sendable, Codable {
         switch self {
         case .tar: "https://www.gnu.org/software/tar/"
         case .zstd: "https://facebook.github.io/zstd/"
-        case .age, .ageKeygen: "https://age-encryption.org"
+        case .age, .ageKeygen, .agePassphrasePlugin: "https://age-encryption.org"
         case .par2: "https://github.com/Parchive/par2cmdline"
         }
     }
@@ -49,11 +52,12 @@ public enum Tool: String, CaseIterable, Sendable, Codable {
         return homepage
     }
 
-    /// par2 is only needed when recovery data is requested; age-keygen only for generating keys.
+    /// par2 is only needed when recovery data is requested, age-keygen only for generating
+    /// keys, and the passphrase plugin only for passphrase encryption.
     public var isRequiredForArchiving: Bool {
         switch self {
         case .tar, .zstd, .age: true
-        case .ageKeygen, .par2: false
+        case .ageKeygen, .agePassphrasePlugin, .par2: false
         }
     }
 }

@@ -18,6 +18,10 @@ final class AppModel {
         case failed(String)
     }
 
+    enum EncryptionMethod: String {
+        case keys, passphrase
+    }
+
     let keys = KeyStore()
     let preferences = Preferences()
 
@@ -29,6 +33,15 @@ final class AppModel {
     var selectedRecipientIDs: Set<Recipient.ID> {
         didSet { UserDefaults.standard.set(selectedRecipientIDs.map(\.uuidString), forKey: "selectedRecipients") }
     }
+    var encryptionMethod: EncryptionMethod {
+        didSet { UserDefaults.standard.set(encryptionMethod.rawValue, forKey: "encryptionMethod") }
+    }
+    /// Only ever held in memory, and cleared once an archive is made with it.
+    var passphrase = ""
+    var passphraseConfirmation = ""
+    /// The last passphrase Epochary generated, shown in full so it can be written down.
+    private(set) var generatedPassphrase: String?
+    var generatedPassphraseSaved = false
     /// Percent of PAR2 redundancy; 0 means none.
     var parityPercent: Int {
         didSet { UserDefaults.standard.set(parityPercent, forKey: "parityPercent") }
@@ -69,6 +82,7 @@ final class AppModel {
         customCapacity = defaults.object(forKey: "customCapacity") == nil ? 100 : defaults.double(forKey: "customCapacity")
         customCapacityUnit = defaults.string(forKey: "customCapacityUnit").flatMap(CapacityUnit.init(rawValue:)) ?? .gigabytes
         pauseAfterEachSegment = defaults.bool(forKey: "pauseAfterEachSegment")
+        encryptionMethod = defaults.string(forKey: "encryptionMethod").flatMap(EncryptionMethod.init(rawValue:)) ?? .keys
         if let stored = defaults.stringArray(forKey: "selectedRecipients") {
             selectedRecipientIDs = Set(stored.compactMap(UUID.init(uuidString:)))
         } else {
@@ -114,7 +128,7 @@ final class AppModel {
         if items.isEmpty { return "Add files or folders to archive." }
         do { try ArchiveLayout.validateName(name) } catch { return error.localizedDescription }
         if destination == nil { return "Choose where to save the archive." }
-        if selectedRecipients.isEmpty { return "Choose at least one key to encrypt to." }
+        if let problem = encryptionProblem { return problem }
         if parityPercent > 0, preferences.toolLocator.locate(.par2) == nil {
             return "par2 isn't installed, so recovery data can't be created."
         }
@@ -139,6 +153,44 @@ final class AppModel {
             + "the archive needs up to \(space.requirement.bytes.formatted(.byteCount(style: .file)))."
     }
 
+    private var encryptionProblem: String? {
+        switch encryptionMethod {
+        case .keys:
+            return selectedRecipients.isEmpty ? "Choose at least one key to encrypt to." : nil
+        case .passphrase:
+            if preferences.toolLocator.locate(.agePassphrasePlugin) == nil {
+                return "age-plugin-batchpass isn't installed, so a passphrase can't be used."
+            }
+            if passphrase.isEmpty { return "Enter a passphrase." }
+            do { try Passphrase.validate(passphrase) } catch { return error.localizedDescription }
+            if passphrase != passphraseConfirmation { return "The passphrases don't match." }
+            if shownGeneratedPassphrase != nil, !generatedPassphraseSaved {
+                return "Confirm you've saved the generated passphrase."
+            }
+            return nil
+        }
+    }
+
+    /// The generated passphrase, while it's still the one in use.
+    var shownGeneratedPassphrase: String? {
+        generatedPassphrase.flatMap { $0 == passphrase ? $0 : nil }
+    }
+
+    func generatePassphrase() {
+        let generated = Passphrase.generate()
+        generatedPassphrase = generated
+        generatedPassphraseSaved = false
+        passphrase = generated
+        passphraseConfirmation = generated
+    }
+
+    private func forgetPassphrase() {
+        passphrase = ""
+        passphraseConfirmation = ""
+        generatedPassphrase = nil
+        generatedPassphraseSaved = false
+    }
+
     var destinationVolume: DestinationVolume? {
         destination.flatMap(DestinationVolume.init(containing:))
     }
@@ -153,11 +205,13 @@ final class AppModel {
         guard let destination else { return nil }
         return ArchiveRequest(
             sources: items.map(\.url), destinationDirectory: destination, name: name,
-            recipients: selectedRecipients, compressionLevel: preferences.compressionLevel,
+            recipients: encryptionMethod == .keys ? selectedRecipients : [],
+            compressionLevel: preferences.compressionLevel,
             longWindow: preferences.longWindow, parityPercent: parityPercent > 0 ? parityPercent : nil,
             excludeFinderMetadata: preferences.excludeFinderMetadata, verify: preferences.verify,
             segmentation: segmentSize.map { SegmentOptions(size: $0, pauseAfterEach: pauseAfterEachSegment) },
-            stopOnSourceChange: stopOnSourceChange)
+            stopOnSourceChange: stopOnSourceChange,
+            passphrase: encryptionMethod == .passphrase ? passphrase : nil)
     }
 
     // MARK: Items
@@ -222,6 +276,7 @@ final class AppModel {
             do {
                 let finished = try await result
                 phase = .finished(finished)
+                forgetPassphrase()
                 NSSound(named: "Glass")?.play()
             } catch is CancellationError {
                 phase = .editing
@@ -272,6 +327,7 @@ final class AppModel {
     func startOver() {
         items = []
         name = ArchiveLayout.defaultName()
+        forgetPassphrase()
         phase = .editing
     }
 

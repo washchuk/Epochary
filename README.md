@@ -116,12 +116,13 @@ Epochary bundles unmodified builds of these tools in `Epochary.app/Contents/Help
 |---|---|---|
 | [GNU tar](https://www.gnu.org/software/tar/) | 1.35 | GPL-3.0-or-later |
 | [Zstandard](https://facebook.github.io/zstd/) | 1.5.7 | BSD-3-Clause (from its BSD/GPLv2 dual license), with libdivsufsort (MIT) |
-| [age](https://age-encryption.org) | 1.3.2 | BSD-3-Clause, plus the BSD-licensed Go standard library and modules it's built with |
+| [age](https://age-encryption.org) (with age-keygen and age-plugin-batchpass) | 1.3.2 | BSD-3-Clause, plus the BSD-licensed Go standard library and modules it's built with |
 | [par2cmdline-turbo](https://github.com/animetosho/par2cmdline-turbo) | 1.5.0 | GPL-2.0-or-later |
 
 They're separate programs that Epochary runs as separate processes, so their licenses
 don't extend to Epochary's own code. Their license texts and a notices file are bundled in
-`Contents/Resources/Licenses` and shown in **Settings › Licenses**.
+`Contents/Resources/Licenses` and shown in **Settings › Licenses**. Epochary's passphrase
+generator also uses the BIP39 English word list from age's source, under age's license.
 
 par2cmdline-turbo is a faster fork of par2cmdline (multi-threaded, with SIMD) that writes
 the identical PAR2 format, which matters for tape-sized segments.
@@ -153,13 +154,26 @@ exact source code available. For every release that ships the bundled tools:
 
 The bundled notices point to the releases page for the source.
 
-## Keys
+## Keys or a passphrase
 
 Archives are encrypted to one or more age **public keys**. In **Settings › Keys** you can
 paste a public key (`age1…`, or an `ssh-ed25519`/`ssh-rsa` key), import one from an
 existing identity file, or generate a new key pair with `age-keygen`, optionally
 post-quantum. Epochary only ever stores public keys. Encrypt to at least two keys kept in
 different places: without a private key, an archive can never be opened.
+
+Or choose **Passphrase** under Encryption. The archive is an ordinary age
+passphrase-encrypted file, and restoring is `age -d archive.tar.zst.age`, which asks for
+the passphrase. A few things to know:
+
+- age allows a passphrase only on its own, with no keys alongside it, so there's no backup:
+  a forgotten passphrase means a lost archive.
+- Anyone with a copy can keep guessing offline for as long as they like, so the passphrase
+  has to be strong. **Generate Passphrase** makes one of ten random words (about 110 bits),
+  the same kind `age -p` suggests.
+- Epochary never saves the passphrase. It's held in memory only while the archive is made.
+- age only reads passphrases typed at a terminal, so Epochary hands it over through age's
+  official `age-plugin-batchpass` plugin. Only making the archive needs the plugin.
 
 ## Building
 
@@ -202,7 +216,7 @@ EPOCHARY_TOOLS_DIR="$PWD/../../build/vendor/bin" swift test
   consistent copy. The list itself is saved encrypted, as `<name>.changes.txt.age`, since
   file names are never stored in plain text. There are no snapshots: making them needs an
   Apple-granted entitlement and only covers APFS, so for live data, archive from a snapshot
-  you make yourself (a NAS snapshot folder works) or from a copy.
+  you make yourself (a NAS snapshot folder works) or from a copy. In other words, Epochary is designed for static datasets, not backups of live systems or those wanting differential or incremental backups.
 - **Sleep:** the Mac is kept from idle-sleeping while an archive is being made, including
   while it waits between segments, so helper processes and network shares stay connected.
   A share that disconnects anyway fails the archive, which then has to be started again.

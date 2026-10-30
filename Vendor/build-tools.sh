@@ -6,7 +6,8 @@
 #   Vendor/build-tools.sh [output-directory]     (default: build/vendor)
 #
 # Output:
-#   bin/       gtar, zstd, age, age-keygen, par2   (copied into Epochary.app/Contents/Helpers)
+#   bin/       gtar, zstd, age, age-keygen, age-plugin-batchpass, par2
+#              (copied into Epochary.app/Contents/Helpers)
 #   Licenses/  license texts and THIRD-PARTY-NOTICES.txt   (copied into the app's Resources)
 #   sources/   the exact source archives and this script. Publish these with every release
 #              that ships the binaries: GNU tar and par2cmdline-turbo are GPL, which requires
@@ -118,13 +119,14 @@ src=$(unpack "$AGE_SRC" go)
 export GOPATH=$WORK/gopath GOMODCACHE=$WORK/gopath/pkg/mod GOFLAGS=-mod=readonly CGO_ENABLED=0 GOTOOLCHAIN=local
 for arch in arm64 x86_64; do
     goarch=$([ $arch = x86_64 ] && echo amd64 || echo arm64)
-    for cmd in age age-keygen; do
+    # age-plugin-batchpass lets Epochary hand age a passphrase without a terminal.
+    for cmd in age age-keygen age-plugin-batchpass; do
         (cd "$src" && GOOS=darwin GOARCH=$goarch "$GO" build -trimpath \
             -ldflags "-X main.Version=v$AGE_VERSION" -o "$WORK/$cmd-$arch" ./cmd/$cmd)
     done
 done
 
-for tool in gtar zstd par2 age age-keygen; do universal $tool; done
+for tool in gtar zstd par2 age age-keygen age-plugin-batchpass; do universal $tool; done
 
 echo "==> Checking the binaries"
 for tool in "$OUT"/bin/*; do
@@ -158,7 +160,7 @@ go_license=$(first_file "$GOROOT_DIR/LICENSE" "$GOROOT_DIR/../LICENSE")
 [ -n "$go_license" ] || { echo "error: can't find Go's LICENSE near $GOROOT_DIR" >&2; exit 1; }
 cp "$go_license" "$L/go-standard-library.BSD-3-Clause.txt"
 # Every Go module compiled into age, as recorded in the binary itself.
-go_modules=$("$GO" version -m "$WORK/age-arm64" "$WORK/age-keygen-arm64" | awk '$1 == "dep" { print $2 "@" $3 }' | sort -u)
+go_modules=$("$GO" version -m "$WORK/age-arm64" "$WORK/age-keygen-arm64" "$WORK/age-plugin-batchpass-arm64" | awk '$1 == "dep" { print $2 "@" $3 }' | sort -u)
 for module in $go_modules; do
     license=$(first_file "$GOMODCACHE/$module"/LICENSE*)
     [ -n "$license" ] || { echo "error: no license file for Go module $module" >&2; exit 1; }
@@ -188,13 +190,15 @@ Zstandard $ZSTD_VERSION  (zstd)
   Includes libdivsufsort (MIT, zstd-divsufsort.MIT.txt).
   https://facebook.github.io/zstd/
 
-age $AGE_VERSION  (age, age-keygen)
+age $AGE_VERSION  (age, age-keygen, age-plugin-batchpass)
   License: BSD 3-Clause  (age.BSD-3-Clause.txt)
   Copyright 2019 The age Authors
   Built with Go, whose standard library (go-standard-library.BSD-3-Clause.txt) and these
   modules are compiled in, each under the license in the matching go-*.txt file:
 $(for module in $go_modules; do echo "    $module"; done)
   https://age-encryption.org
+  Epochary's passphrase generator also uses the BIP39 English word list from age's
+  source, under the same license.
 
 SOURCE CODE
 

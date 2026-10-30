@@ -24,6 +24,8 @@ struct ArchiveReadme: Sendable {
     private var encrypted: String { layout.encryptedFileName }
     private var compressed: String { layout.compressedFileName }
     private var decompress: String { request.longWindow ? "zstd -d --long=31" : "zstd -d" }
+    /// age asks for a passphrase itself; a key file has to be named.
+    private var decrypt: String { request.passphrase == nil ? "age -d -i key.txt" : "age -d" }
     private var hasParity: Bool { request.parityPercent != nil }
 
     // MARK: Final README
@@ -68,12 +70,12 @@ struct ArchiveReadme: Sendable {
           2. Optionally, check that decryption gives back exactly what was encrypted.
              Compare the printed hash with the one in \(compressed).sha256:
 
-               age -d -i key.txt \(encrypted) | sha256sum
+               \(decrypt) \(encrypted) | sha256sum
         """, """
           3. Decrypt, decompress and extract in one go:
 
                mkdir restored
-               age -d -i key.txt \(encrypted) | \(decompress) | tar -xf - -C restored
+               \(decrypt) \(encrypted) | \(decompress) | tar -xf - -C restored
 
         \(extractionNotes)
         """]
@@ -97,7 +99,7 @@ struct ArchiveReadme: Sendable {
         \(consistency(outcome))
 
 
-        \(recipientsSection)
+        \(encryptionSection)
 
 
         \(toolsSection)
@@ -160,7 +162,7 @@ struct ArchiveReadme: Sendable {
              correctly:
 
                mkdir restored
-               cat \(naming.glob) | age -d -i key.txt | \(decompress) | tar -xf - -C restored
+               cat \(naming.glob) | \(decrypt) | \(decompress) | tar -xf - -C restored
 
              To check the joined archive first, compare the output of
              "cat \(naming.glob) | sha256sum" with \(encrypted).sha256.
@@ -174,7 +176,7 @@ struct ArchiveReadme: Sendable {
                  printf 'Insert the medium holding segment %s, then press Return. ' "$n" >&2
                  read _ < /dev/tty
                  cat "$MEDIUM/\(layout.name)-segment-$n/\(encrypted).$n"
-               done | age -d -i key.txt | \(decompress) | tar -xf - -C restored
+               done | \(decrypt) | \(decompress) | tar -xf - -C restored
 
         \(extractionNotes)
         """]
@@ -222,7 +224,7 @@ struct ArchiveReadme: Sendable {
         \(consistency(outcome))
 
 
-        \(recipientsSection)
+        \(encryptionSection)
 
 
         \(toolsSection)
@@ -283,7 +285,7 @@ struct ArchiveReadme: Sendable {
         segment's folder lists every segment with its checksum and gives the exact
         restore commands. In short, with all segment files in one folder:
 
-          cat \(naming.glob) | age -d -i key.txt | \(decompress) | tar -xf - -C restored
+          cat \(naming.glob) | \(decrypt) | \(decompress) | tar -xf - -C restored
 
 
         FILES
@@ -299,7 +301,7 @@ struct ArchiveReadme: Sendable {
         \(check)
 
 
-        \(recipientsSection)
+        \(encryptionSection)
 
 
         \(toolsSection)
@@ -342,11 +344,20 @@ struct ArchiveReadme: Sendable {
           contents, and a file that was removed is missing. File names are only stored
           encrypted, so the list is in \(layout.changesFileName). To read it:
 
-            age -d -i key.txt \(layout.changesFileName)
+            \(decrypt) \(layout.changesFileName)
         """
     }
 
-    private var recipientsSection: String {
+    private var encryptionSection: String {
+        guard request.passphrase == nil else {
+            return """
+            ENCRYPTED WITH A PASSPHRASE
+
+              Decrypting needs the passphrase this archive was made with; age asks for it
+              when it starts. The passphrase is not stored anywhere, and without it the
+              archive can't be opened.
+            """
+        }
         let lines = request.recipients
             .map { "  \($0.label.isEmpty ? "(unlabeled)" : $0.label)\n      \($0.publicKey)" }
             .joined(separator: "\n")
@@ -385,8 +396,11 @@ struct ArchiveReadme: Sendable {
     }
 
     private var extractionNotes: String {
-        """
-             key.txt is your age identity (private key) file. Any tar that reads POSIX
+        let decrypting = request.passphrase == nil
+            ? "key.txt is your age identity (private key) file."
+            : "age asks for the passphrase once the archive starts arriving."
+        return """
+             \(decrypting) Any tar that reads POSIX
              pax archives works, including GNU tar and bsdtar. File owners are stored as
              numeric IDs and are only restored when extracting as root.
         """

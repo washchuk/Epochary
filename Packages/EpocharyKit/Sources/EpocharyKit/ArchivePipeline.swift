@@ -106,18 +106,24 @@ public struct ArchivePipeline: Sendable {
         async throws -> ArchiveResult {
         let started = Date()
         // Sleep would stall the helper processes and drop network shares mid-archive.
-        let activity = ProcessInfo.processInfo.beginActivity(options: .userInitiated, reason: "Creating an archive")
+        let activity = ProcessInfo.processInfo.beginActivity(options: .userInitiated,
+                                                             reason: "Creating the archive \"\(request.name)\"")
         defer { ProcessInfo.processInfo.endActivity(activity) }
         let reporter = ProgressReporter(handler: progress)
         reporter.update { $0.stage = .preparing }
 
         try ArchiveLayout.validateName(request.name)
-        guard !request.recipients.isEmpty else { throw EpocharyError.noRecipients }
+        if let passphrase = request.passphrase {
+            try Passphrase.validate(passphrase)
+        } else if request.recipients.isEmpty {
+            throw EpocharyError.noRecipients
+        }
         let members = try TarMember.plan(for: request.sources)
         let executables = Executables(
             tar: try tools.require(.tar),
             zstd: try tools.require(.zstd),
             age: try tools.require(.age),
+            agePassphrasePlugin: request.passphrase == nil ? nil : try tools.require(.agePassphrasePlugin),
             par2: request.parityPercent == nil ? nil : try tools.require(.par2))
         let layout = ArchiveLayout(name: request.name, destinationDirectory: request.destinationDirectory)
         try Self.checkDestination(layout, sources: request.sources)
@@ -167,7 +173,7 @@ public struct ArchivePipeline: Sendable {
             var changesFile: Data?
             if !stream.changes.isEmpty {
                 changesFile = try await Self.encryptedChangeList(stream.changes, layout: layout, request: request,
-                                                                 age: executables.age)
+                                                                 executables: executables)
                 try changesFile?.write(to: layout.changesFile)
             }
 
@@ -234,7 +240,12 @@ public struct ArchivePipeline: Sendable {
         let tar: URL
         let zstd: URL
         let age: URL
+        let agePassphrasePlugin: URL?
         let par2: URL?
+
+        func ageEncryption(for request: ArchiveRequest) -> CommandLines.Age {
+            CommandLines.age(request, passphrasePlugin: agePassphrasePlugin)
+        }
     }
 
     struct StreamOutcome {
@@ -258,8 +269,9 @@ public struct ArchivePipeline: Sendable {
         let compressor = RunningProcess(name: "zstd", executable: executables.zstd,
                                         arguments: CommandLines.zstdCompress(level: request.compressionLevel,
                                                                              longWindow: request.longWindow))
-        let encryptor = RunningProcess(name: "age", executable: executables.age,
-                                       arguments: CommandLines.age(recipients: request.recipients))
+        let encryption = executables.ageEncryption(for: request)
+        let encryptor = RunningProcess(name: "age", executable: executables.age, arguments: encryption.arguments,
+                                       environment: encryption.environment)
         let tester = request.verify
             ? RunningProcess(name: "zstd-test", executable: executables.zstd,
                              arguments: CommandLines.zstdTest(longWindow: request.longWindow))
@@ -473,9 +485,9 @@ public struct ArchivePipeline: Sendable {
     // MARK: - Changes
 
     /// The changed-file list holds file names, which are never stored in plain text,
-    /// so it's encrypted to the archive's recipients.
+    /// so it's encrypted the same way as the archive.
     static func encryptedChangeList(_ changes: [SourceChange], layout: ArchiveLayout, request: ArchiveRequest,
-                                    age: URL) async throws -> Data {
+                                    executables: Executables) async throws -> Data {
         let lines = changes.map { "\($0.kind.rawValue)\t\($0.path)" }.joined(separator: "\n")
         let text = """
         Files and folders that changed or disappeared while the archive \(layout.name) was being made.
@@ -485,8 +497,9 @@ public struct ArchivePipeline: Sendable {
         \(lines)
 
         """
-        let result = try await ProcessRunner.capture(age, arguments: CommandLines.age(recipients: request.recipients),
-                                                     stdin: Data(text.utf8))
+        let encryption = executables.ageEncryption(for: request)
+        let result = try await ProcessRunner.capture(executables.age, arguments: encryption.arguments,
+                                                     environment: encryption.environment, stdin: Data(text.utf8))
         guard result.status == 0 else {
             throw EpocharyError.processFailed(.age, status: result.status, message: result.stderr)
         }

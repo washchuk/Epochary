@@ -18,9 +18,10 @@ let ignoreSIGPIPE: Void = { signal(SIGPIPE, SIG_IGN) }()
 
 /// Environment for child processes. GUI apps launch without a locale, and GNU tar
 /// needs one to store non-ASCII file names as UTF-8 in pax headers.
-func childEnvironment() -> [String: String] {
+func childEnvironment(adding extra: [String: String] = [:]) -> [String: String] {
     var environment = ProcessInfo.processInfo.environment
     environment["LC_ALL"] = "en_US.UTF-8"
+    environment.merge(extra) { _, new in new }
     return environment
 }
 
@@ -44,12 +45,13 @@ final class RunningProcess: @unchecked Sendable {
     /// Called with each line of standard error as it arrives. Set before `start()`.
     var onStderrLine: (@Sendable (String) -> Void)?
 
-    init(name: String, executable: URL, arguments: [String], workingDirectory: URL? = nil) {
+    init(name: String, executable: URL, arguments: [String], environment: [String: String] = [:],
+         workingDirectory: URL? = nil) {
         _ = ignoreSIGPIPE
         self.name = name
         process.executableURL = executable
         process.arguments = arguments
-        process.environment = childEnvironment()
+        process.environment = childEnvironment(adding: environment)
         process.standardError = stderrPipe
         if let workingDirectory { process.currentDirectoryURL = workingDirectory }
     }
@@ -118,10 +120,10 @@ enum ProcessRunner {
     }
 
     /// Runs a short-lived command to completion, capturing its output.
-    static func capture(_ executable: URL, arguments: [String], stdin: Data = Data(),
-                        workingDirectory: URL? = nil) async throws -> Output {
+    static func capture(_ executable: URL, arguments: [String], environment: [String: String] = [:],
+                        stdin: Data = Data(), workingDirectory: URL? = nil) async throws -> Output {
         let running = RunningProcess(name: executable.lastPathComponent, executable: executable, arguments: arguments,
-                                     workingDirectory: workingDirectory)
+                                     environment: environment, workingDirectory: workingDirectory)
         let input = Pipe()
         let output = Pipe()
         running.process.standardInput = input
