@@ -141,18 +141,36 @@ it into the app and signs each tool with the app's identity and the hardened run
 Release build fails if the tools haven't been built. A Debug build without them falls back
 to installed copies.
 
-### Releasing (license compliance)
+### Releasing
 
-GNU tar and par2cmdline-turbo are GPL. Distributing their binaries requires making their
-exact source code available. For every release that ships the bundled tools:
+Releases are built by [`Scripts/release.sh`](Scripts/release.sh). From a clean, committed
+tree, it:
 
-1. Run `Vendor/build-tools.sh`, then build, sign and notarize the Release build.
-2. Create the GitHub release and attach the app and everything in `build/vendor/sources/`:
-   the four source archives, `build-tools.sh` and `SHA256SUMS`. Putting the source in the
-   same place as the binaries is what the GPL asks for.
-3. Keep those source files attached for as long as that release's app is downloadable.
+- rebuilds the bundled tools
+- builds the Release app, signed with the Developer ID and the hardened runtime
+- checks every signature
+- notarizes the app, then the DMG, and staples the approval to both
+- checks the result with Gatekeeper
+- gathers the release files in `build/release/<version>/assets`: the DMG, the tools'
+  source archives and `build-tools.sh`, with a `SHA256SUMS` file for all of them
 
-The bundled notices point to the releases page for the source.
+`Scripts/release.sh --dry-run` reuses the built tools and stops before notarization, to
+check a build first.
+
+Notarization needs Apple ID credentials, saved once in the keychain. The script uses the
+profile name `epochary-notary` (or `NOTARY_PROFILE`):
+
+```bash
+xcrun notarytool store-credentials epochary-notary --apple-id <apple-id> --team-id 849VGKLAH8
+```
+
+Then tag the commit (`v<version>`), push the tag, and create the GitHub release with
+everything in `assets`.
+
+GNU tar and par2cmdline-turbo are GPL, and distributing their binaries requires making
+their exact source available. Attaching the source archives to the same release as the app
+does that. Keep them attached for as long as that release's app can be downloaded. The
+bundled notices point to the releases page for the source.
 
 ## Keys or a passphrase
 
